@@ -1,29 +1,29 @@
-use clap::{App, Arg};
+use clap::{Arg, Command};
 
-pub fn new_config_cmd() -> App<'static> {
-    clap::App::new("config")
+pub fn new_config_cmd() -> Command<'static> {
+    clap::Command::new("config")
         .about("config")
         .subcommand(config_show_cmd())
         .subcommand(config_generate_default())
 }
 
-fn config_show_cmd() -> App<'static> {
-    clap::App::new("show")
+fn config_show_cmd() -> Command<'static> {
+    clap::Command::new("show")
         .about("show some info ")
         .subcommand(config_show_info_cmd())
         .subcommand(config_show_all_cmd())
 }
 
-fn config_generate_default() -> App<'static> {
-    clap::App::new("gendefault")
+fn config_generate_default() -> Command<'static> {
+    clap::Command::new("gendefault")
         .about("generate default config to file")
         .args(&[Arg::new("filepath").value_name("filepath").index(1)])
 }
 
-fn config_show_info_cmd() -> App<'static> {
-    clap::App::new("info").about("show info")
+fn config_show_info_cmd() -> Command<'static> {
+    clap::Command::new("info").about("show info")
 }
 
-fn config_show_all_cmd() -> App<'static> {
-    clap::App::new("all").about("show all ")
+fn config_show_all_cmd() -> Command<'static> {
+    clap::Command::new("all").about("show all ")
 }

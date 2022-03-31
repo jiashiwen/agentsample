@@ -1,33 +1,29 @@
-use crate::cmd::{new_config_cmd, new_start_cmd, new_stop_cmd};
-use crate::commons::CommandCompleter;
-use crate::commons::SubCmd;
-use crate::configure::{generate_default_config, set_config_file_path};
-use crate::configure::{get_config, get_config_file_path, get_current_config_yml, set_config};
-// use crate::resources::init_resources;
-// use crate::{httpserver, interact};
+use std::{env, fs, thread};
+use std::borrow::Borrow;
+use std::process::Command;
+use std::str::FromStr;
 
 use clap::{AppSettings, Arg, ArgMatches};
 use clap::Command as Clap_Command;
 use fork::{daemon, Fork};
 use lazy_static::lazy_static;
-use std::borrow::Borrow;
-use std::net::SocketAddr;
-use std::process::Command;
-use std::str::FromStr;
-use std::{env, fs, thread};
-use std::time::Duration;
 use sysinfo::{Pid, ProcessExt, RefreshKind, System, SystemExt};
-use tokio::runtime::Runtime;
-use tokio::task;
-use crate::agent::start_agent;
+use tokio::runtime;
+
+use crate::agent::{start_curl_agent, start_ping_agent};
+use crate::cmd::{new_config_cmd, new_start_cmd, new_stop_cmd};
+use crate::commons::CommandCompleter;
+use crate::commons::SubCmd;
+use crate::configure::{generate_default_config, set_config_file_path};
+use crate::configure::{get_config, get_config_file_path, get_current_config_yml, set_config};
 
 lazy_static! {
-    // static ref CLIAPP: clap::App<'static> = App::new("serverframe-rs")
+
     static ref CLIAPP: Clap_Command<'static> = Clap_Command::new("agent")
         .version("1.0")
         .author("Shiwen Jia. <jiashiwen@gmail.com>")
         .about("RustBoot")
-        .setting(AppSettings::ArgRequiredElseHelp)
+        .arg_required_else_help(true)
         .arg(
             Arg::new("config")
                 .short('c')
@@ -135,13 +131,37 @@ fn cmd_match(matches: &ArgMatches) {
         }
 
         println!("current pid is:{}", std::process::id());
-        let t1 = thread::spawn(|| {
-            let rt = Runtime::new().unwrap();
+        // check config
+        let cfg = get_config().unwrap();
+        let task_ping_handle = thread::spawn(move || {
+            let c = cfg.clone();
+
+            let rt = runtime::Builder::new_multi_thread()
+                .worker_threads(c.threads)
+                .enable_io()
+                .enable_time()
+                .build()
+                .unwrap();
+
             rt.block_on(async {
-                start_agent().await;
+                start_ping_agent(c.ticker_sec, c.ping_file.as_str()).await;
             });
         });
-        t1.join().unwrap();
+        let cfg = get_config().unwrap();
+        let task_curl_handle = thread::spawn(move || {
+            let c = cfg.clone();
+            let rt = runtime::Builder::new_multi_thread()
+                .worker_threads(c.threads)
+                .enable_io()
+                .enable_time()
+                .build()
+                .unwrap();
+            rt.block_on(async {
+                start_curl_agent(c.ticker_sec, c.curl_file.as_str()).await;
+            });
+        });
+        task_ping_handle.join().unwrap();
+        task_curl_handle.join().unwrap();
     }
 
     if let Some(ref _matches) = matches.subcommand_matches("stop") {

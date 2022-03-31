@@ -1,0 +1,5 @@
+---
+threads: 1
+ticker_sec: 10
+ping_file: ping.json
+curl_file: curl.json

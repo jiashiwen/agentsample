@@ -7,51 +7,31 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::sync::RwLock;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct TiKVConfig {
-    pub pdaddrs: Vec<String>,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct HttpConfig {
-    pub port: u16,
-    pub addr: String,
-}
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct Config {
-    pub tikv: TiKVConfig,
-    pub http: HttpConfig,
+    pub threads: usize,
+    pub ticker_sec: usize,
+    pub ping_file: String,
+    pub curl_file: String,
 }
 
-impl TiKVConfig {
-    pub fn default() -> Self {
-        Self {
-            pdaddrs: vec!["127.0.0.1:2379".to_string()],
-        }
-    }
-}
-
-impl HttpConfig {
-    pub fn default() -> Self {
-        Self {
-            port: 3000,
-            addr: "0.0.0.0".to_string(),
-        }
-    }
-}
 
 impl Config {
     pub fn default() -> Self {
         Self {
-            tikv: TiKVConfig::default(),
-            http: HttpConfig::default(),
+            threads: 1,
+            ticker_sec: 10,
+            ping_file: "ping.json".to_string(),
+            curl_file: "curl.json".to_string(),
         }
     }
 
     pub fn set_self(&mut self, config: Config) {
-        self.tikv = config.tikv;
-        self.http = config.http;
+        self.threads = config.threads;
+        self.ticker_sec = config.ticker_sec;
+        self.ping_file = config.ping_file;
+        self.curl_file = config.curl_file;
     }
 
     pub fn get_config_image(&self) -> Self {

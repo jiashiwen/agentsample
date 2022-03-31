@@ -1,31 +1,38 @@
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use tokio::task::JoinHandle;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+
 use crossbeam::channel::tick;
-use tokio::spawn;
-use crate::Task;
 
+use crate::agent::{file_to_http_tasks, file_to_ping_tasks};
 
-pub async fn start_agent() {
-    let n = Arc::new(AtomicUsize::new(0));
-    let start = Instant::now();
-    let ticker = tick(Duration::from_millis(1000));
-
-    let task = Task::new(10);
-
+pub async fn start_ping_agent(ticker_sec: usize, exec_file: &str) {
+    let ticker = tick(Duration::from_secs(ticker_sec as u64));
     loop {
         let _ = ticker.recv().unwrap();
-        let mut x = n.clone();
-        let t = task.clone();
-
-        tokio::spawn(async move {
-            println!("task parallel: {:?}", x.load(Ordering::Relaxed) < task.parallel);
-            if x.load(Ordering::Relaxed) < task.parallel {
-                x.fetch_add(1, Ordering::SeqCst);
-                t.run().await;
-                x.fetch_sub(1, Ordering::SeqCst);
+        let tasks = file_to_ping_tasks(exec_file);
+        if let Ok(vec_tasks) = tasks {
+            for ping_tasks in vec_tasks.into_iter() {
+                for host in ping_tasks.hosts.into_iter() {
+                    let name = ping_tasks.name.clone();
+                    tokio::spawn(async move {
+                        host.run(name.as_str());
+                    });
+                }
             }
-        });
+        }
+    }
+}
+
+pub async fn start_curl_agent(ticker_sec: usize, exec_file: &str) {
+    let ticker = tick(Duration::from_secs(ticker_sec as u64));
+    loop {
+        let _ = ticker.recv().unwrap();
+        let tasks = file_to_http_tasks(exec_file);
+        if let Ok(vec_tasks) = tasks {
+            for curl_task in vec_tasks.into_iter() {
+                tokio::spawn(async move {
+                    curl_task.run();
+                });
+            }
+        }
     }
 }
