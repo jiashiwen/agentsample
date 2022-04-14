@@ -11,6 +11,7 @@ use sysinfo::{Pid, ProcessExt, RefreshKind, System, SystemExt};
 use tokio::runtime;
 
 use crate::agent::{start_curl_agent, start_ping_agent};
+use crate::checkers::check_local_desc_path;
 use crate::cmd::{new_config_cmd, new_start_cmd, new_stop_cmd};
 use crate::commons::CommandCompleter;
 use crate::commons::SubCmd;
@@ -52,6 +53,7 @@ lazy_static! {
 }
 
 pub fn run_app() {
+    set_config("");
     let matches = CLIAPP.clone().get_matches();
     cmd_match(&matches);
 }
@@ -131,6 +133,10 @@ fn cmd_match(matches: &ArgMatches) {
         }
 
         println!("current pid is:{}", std::process::id());
+
+        //校验本地任务目录是否存在，没有就创建
+        check_local_desc_path().unwrap();
+
         // check config
         let cfg = get_config().unwrap();
         let task_ping_handle = thread::spawn(move || {

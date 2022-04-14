@@ -1,21 +1,65 @@
-use crate::configure::config_error::{ConfigError, ConfigErrorType};
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
-use serde_yaml::from_str;
 use std::fs;
 use std::path::Path;
 use std::sync::Mutex;
 use std::sync::RwLock;
 
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
+use serde_yaml::from_str;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+use crate::configure::config_error::{ConfigError, ConfigErrorType};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct JdCloud {
+    pub ak: String,
+    pub sk: String,
+    pub region: String,
+    pub s3_endpoint: String,
+}
+
+impl JdCloud {
+    pub fn default() -> Self {
+        Self {
+            ak: "".to_string(),
+            sk: "".to_string(),
+            region: "cn-north-1".to_string(),
+            s3_endpoint: "http://s3.cn-north-1.jdcloud-oss.com".to_string(),
+        }
+    }
+}
+
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TaskConfig {
+    pub threads: usize,
+    pub ticker_sec: usize,
+    pub task_desc_local_path: String,
+    pub task_desc_s3_bucket: String,
+    pub task_desc_s3_prefix: String,
+}
+
+impl TaskConfig {
+    pub fn default() -> Self {
+        Self {
+            threads: 1,
+            ticker_sec: 60,
+            task_desc_local_path: "./".to_string(),
+            task_desc_s3_bucket: "pingdata".to_string(),
+            task_desc_s3_prefix: "pingdata/6f0de4620aa567399a84c282ba6b2594/".to_string(),
+        }
+    }
+}
+
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     pub threads: usize,
     pub ticker_sec: usize,
     pub ping_file: String,
     pub curl_file: String,
+    pub jdcloud: JdCloud,
+    pub task_config: TaskConfig,
 }
-
 
 impl Config {
     pub fn default() -> Self {
@@ -24,6 +68,8 @@ impl Config {
             ticker_sec: 10,
             ping_file: "ping.json".to_string(),
             curl_file: "curl.json".to_string(),
+            jdcloud: JdCloud::default(),
+            task_config: TaskConfig::default(),
         }
     }
 
@@ -32,6 +78,8 @@ impl Config {
         self.ticker_sec = config.ticker_sec;
         self.ping_file = config.ping_file;
         self.curl_file = config.curl_file;
+        self.jdcloud = config.jdcloud;
+        self.task_config = config.task_config;
     }
 
     pub fn get_config_image(&self) -> Self {

@@ -1,3 +1,4 @@
+use crate::configure::set_config;
 use crate::logger::init_log;
 
 mod agent;
@@ -6,6 +7,8 @@ mod commons;
 mod configure;
 mod logger;
 mod httpquerry;
+mod s3;
+mod checkers;
 
 #[tokio::main]
 async fn main() {
